@@ -6,6 +6,18 @@ CREATE TABLE IF NOT EXISTS "products"(
     product_id UUID PRIMARY KEY
 );
 
+----------------------------INSERT-BASE-VALUES----------------------------
+INSERT INTO customers (customer_id) VALUES 
+('11111111-1111-1111-1111-111111111111'),
+('22222222-2222-2222-2222-222222222222')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO products (product_id) VALUES 
+('33333333-3333-3333-3333-333333333333'),
+('44444444-4444-4444-4444-444444444444')
+ON CONFLICT DO NOTHING;
+----------------------------INSERT-BASE-VALUES----------------------------
+
 CREATE TABLE IF NOT EXISTS "orders"(
     order_id UUID PRIMARY KEY,
     customer_id UUID REFERENCES customers (customer_id) NOT NULL, 

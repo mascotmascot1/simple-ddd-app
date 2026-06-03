@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+const postgresDialTimeout = 10 * time.Second
+
 func main() {
 	logger := log.New(os.Stdout, "[DDD-PROJECT] ", log.LstdFlags)
 
@@ -19,7 +21,7 @@ func main() {
 		logger.Fatalf("init config: %v\n", err)
 	}
 
-	ctxDB, cancelDB := context.WithTimeout(context.Background(), 10*time.Second) // тут тоже надо в константу вынести
+	ctxDB, cancelDB := context.WithTimeout(context.Background(), postgresDialTimeout) // тут тоже надо в константу вынести
 	db, err := postgres.NewPostgresPool(ctxDB, conf.Postgres.DSN())
 
 	// Конкретно в этом месте, в main.go, если ты не вызовешь cancelDB(), таймер просто дотикает

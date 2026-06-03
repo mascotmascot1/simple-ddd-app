@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:18.4-bookworm
+    restart: always 
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DATABASE}
+    volumes:
+      - pgdata:/var/lib/postgresql/data # именованный том
+      - ./deploy/postgre/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile 
+    restart: always 
+    ports:
+      - "${HTTP_PORT}:${HTTP_PORT}" 
+    environment:
+      HTTP_HOST: ${HTTP_HOST}
+      HTTP_PORT: ${HTTP_PORT}
+      HTTP_SHUTDOWN_TIMEOUT: ${HTTP_SHUTDOWN_TIMEOUT}
+      ORDERS_HTTP_MAXUPLOADSIZE: ${ORDERS_HTTP_MAXUPLOADSIZE}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE}
+      POSTGRES_SSLMODE: ${POSTGRES_SSLMODE}
+    depends_on: 
+      - db
+
+volumes:
+  pgdata: # создание именованного тома
+
