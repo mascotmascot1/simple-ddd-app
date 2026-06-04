@@ -96,3 +96,19 @@
 
 **Успешный ответ (статус 204 no content):**
 Пустое тело ответа. Игнорирует возврат данных, так как ресурс успешно удален.
+
+---------
+## Пример **`.env`** файла:
+
+```
+HTTP_HOST=0.0.0.0
+HTTP_PORT=8085
+HTTP_SHUTDOWN_TIMEOUT=10
+ORDERS_HTTP_MAXUPLOADSIZE=1000
+
+POSTGRES_PORT=5432
+POSTGRES_USER=admin
+POSTGRES_PASSWORD=supersecret
+POSTGRES_DATABASE=orders_db
+POSTGRES_SSLMODE=disable
+```
