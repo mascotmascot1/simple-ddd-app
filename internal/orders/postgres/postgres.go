@@ -19,6 +19,8 @@ import (
 const (
 	maxArgumentCount    = 8
 	defaultItemCapacity = 10
+
+	noItemsMarker = "NO_ITEMS_MARKER"
 )
 
 type PostgresOrderRepo struct {
@@ -47,7 +49,8 @@ func (p *PostgresOrderRepo) Save(ctx context.Context, order *domain.Order) error
 		INSERT INTO orders (order_id, customer_id, total_amount, currency)
 		VALUES (@order_id, @customer_id, @total_amount, @currency)
 		ON CONFLICT (order_id) DO UPDATE
-		SET total_amount = excluded.total_amount;
+		SET total_amount = EXCLUDED.total_amount,
+			currency = EXCLUDED.currency;
 	`
 	args := make(pgx.NamedArgs, maxArgumentCount)
 	args["order_id"] = order.ID()
@@ -89,12 +92,18 @@ func (p *PostgresOrderRepo) Save(ctx context.Context, order *domain.Order) error
 }
 
 func (p *PostgresOrderRepo) FindByID(ctx context.Context, id string) (*domain.Order, error) {
+	// TODO - вариант с json_agg
 	selectQuery := `
 	SELECT 
-		o.customer_id, o.total_amount, o.currency,
-		i.product_id, i.amount, i.currency, i.quantity
+		o.customer_id, 
+		o.total_amount, 
+		o.currency,
+		COALESCE(i.product_id::TEXT, 'NO_ITEMS_MARKER'), 
+		COALESCE(i.amount, 0), 
+		COALESCE(i.currency, ''), 
+		COALESCE(i.quantity, 0)
 	FROM orders o
-	JOIN order_items i ON o.order_id = i.order_id
+	LEFT JOIN order_items i ON o.order_id = i.order_id
 	WHERE o.order_id = @order_id;
 	`
 	args := pgx.NamedArgs{"order_id": id}
@@ -120,6 +129,15 @@ func (p *PostgresOrderRepo) FindByID(ctx context.Context, id string) (*domain.Or
 			&iState.Price.Amount, &iState.Price.Currency, &iState.Quantity)
 		if err != nil {
 			return nil, fmt.Errorf("scan joined order row: %w", err)
+		}
+
+		// Используем инфраструктурный паттерн Sentinel Value (значение-маркер).
+		// Если в заказе еще нет позиций, LEFT JOIN в SQL-запросе сгенерирует строку,
+		// где вместо реального идентификатора товара вернется маркер noItemsMarker.
+		// Мы отсекаем этот артефакт БД на границе слоя, предотвращая попадание
+		// невалидных фиктивных данных в доменную модель агрегата.
+		if iState.ProductID == noItemsMarker {
+			continue
 		}
 		itemsStates = append(itemsStates, iState)
 	}

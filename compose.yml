@@ -2,12 +2,14 @@ services:
   db:
     image: postgres:18.4-bookworm
     restart: always 
+    ports:
+      - "${POSTGRES_PORT}:5432" 
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DATABASE}
     volumes:
-      - pgdata:/var/lib/postgresql/data # именованный том
+      - pgdata:/var/lib/postgresql # именованный том
       - ./deploy/postgre/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   app:

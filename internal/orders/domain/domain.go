@@ -6,8 +6,6 @@ import (
 	"errors"
 )
 
-const averageCountOfItems = 10
-
 var (
 	ErrNegativeAmount = errors.New("amount mustn't be negative")
 	ErrEmptyCurrency  = errors.New("currency mustn't be empty")
@@ -18,7 +16,8 @@ var (
 	ErrEmptyOrderID    = errors.New("order's ID mustn't be empty")
 	ErrEmptyCustomerID = errors.New("customer's ID mustn't be empty")
 
-	ErrMixedCurrency = errors.New("cannot mix the currencies in an order")
+	ErrMixedCurrency     = errors.New("cannot mix the currencies in an order")
+	ErrItemPriceMismatch = errors.New("cannot add existing item with a different price")
 )
 
 // В контексте чистой архитектуры и DDD этот подход классифицируется как
@@ -69,18 +68,6 @@ type orderItem struct {
 	quantity  int64
 }
 
-func (i orderItem) ProductID() string {
-	return i.productID
-}
-
-func (i orderItem) Price() Money {
-	return i.price
-}
-
-func (i orderItem) Quantity() int64 {
-	return i.quantity
-}
-
 // Фабричный метод для создания нового заказа
 func newOrderItem(productID string, price Money, quantity int64) (orderItem, error) {
 	if productID == "" {
@@ -94,6 +81,22 @@ func newOrderItem(productID string, price Money, quantity int64) (orderItem, err
 		price:     price,
 		quantity:  quantity,
 	}, nil
+}
+
+func (i *orderItem) ProductID() string {
+	return i.productID
+}
+
+func (i *orderItem) Price() Money {
+	return i.price
+}
+
+func (i *orderItem) Quantity() int64 {
+	return i.quantity
+}
+
+func (i *orderItem) addQuantity(quantity int64) {
+	i.quantity += quantity
 }
 
 // Entity: OrderItem представляет позицию в заказе
@@ -114,7 +117,7 @@ func NewOrder(orderID, customerID string) (*Order, error) {
 	return &Order{
 		id:         orderID,
 		customerID: customerID,
-		items:      make([]orderItem, 0, averageCountOfItems),
+		items:      make([]orderItem, 0),
 		// totalPrice можно не указывать если нет бизнес правила о том, например, что все новые заказы по умолчнию с USD валютой
 	}, nil
 	// Здесь можно генерировать Domain Event: OrderCreated
@@ -144,13 +147,32 @@ func (o *Order) AddItem(productID string, price Money, quantity int64) error {
 		return ValidateError{err: ErrMixedCurrency}
 	}
 
-	item, err := newOrderItem(productID, price, quantity)
-	if err != nil {
-		return err
-	}
-	o.items = append(o.items, item)
+	var itemExists bool
+	for i := 0; i < len(o.items); i++ {
+		if o.items[i].productID == productID {
+			// Если товар найден, но его цена (amount) отличается от новой
+			if o.items[i].price.amount != price.amount {
+				return ValidateError{err: ErrItemPriceMismatch}
+			}
 
-	total := o.recalculateTotal()
+			itemExists = true
+			o.items[i].addQuantity(quantity)
+			break // прерываем цикл, так как нужный товар уже обновлен
+		}
+	}
+
+	if !itemExists {
+		item, err := newOrderItem(productID, price, quantity)
+		if err != nil {
+			return err
+		}
+		o.items = append(o.items, item)
+	}
+
+	var (
+		err   error
+		total = o.recalculateTotal()
+	)
 	o.totalPrice, err = NewMoney(total, price.currency)
 	if err != nil {
 		return err
