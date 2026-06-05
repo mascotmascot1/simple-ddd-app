@@ -17,9 +17,9 @@ func InitModule(db *pgxpool.Pool, router chi.Router, conf *cfg.Orders, logger *l
 	ordersLogger := log.New(logger.Writer(), logger.Prefix()+"[ORDERS] ", logger.Flags())
 
 	// 1. Инфраструктура (Outbound)
-	orderRepo := postgres.NewPostgresOrderRepo(db)
-	customerChecker := postgres.NewPostgresCustomerChecker(db)
-	productChecker := postgres.NewPostgresProductChecker(db)
+	orderRepo := postgres.NewOrderRepo(db)
+	customerChecker := postgres.NewCustomerChecker(db)
+	productChecker := postgres.NewProductChecker(db)
 
 	// 2. Бизнес-логика (Application).
 	// Компилятор автоматически проверяет, что репозитории соответствуют интерфейсам из пакета ports.

@@ -22,7 +22,7 @@ func main() {
 	}
 
 	ctxDB, cancelDB := context.WithTimeout(context.Background(), postgresDialTimeout) // тут тоже надо в константу вынести
-	db, err := postgres.NewPostgresPool(ctxDB, conf.Postgres.DSN())
+	db, err := postgres.NewPool(ctxDB, conf.Postgres.DSN())
 
 	// Конкретно в этом месте, в main.go, если ты не вызовешь cancelDB(), таймер просто дотикает
 	// свои 10 секунд, закроет канал, отвалится, и сборщик мусора его заберет. Глобальной утечки

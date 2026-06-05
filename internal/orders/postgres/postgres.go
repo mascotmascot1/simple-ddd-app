@@ -23,17 +23,17 @@ const (
 	noItemsMarker = "NO_ITEMS_MARKER"
 )
 
-type PostgresOrderRepo struct {
+type OrderRepo struct {
 	db *pgxpool.Pool
 }
 
-func NewPostgresOrderRepo(db *pgxpool.Pool) *PostgresOrderRepo {
-	return &PostgresOrderRepo{
+func NewOrderRepo(db *pgxpool.Pool) *OrderRepo {
+	return &OrderRepo{
 		db: db,
 	}
 }
 
-func (p *PostgresOrderRepo) Save(ctx context.Context, order *domain.Order) error {
+func (p *OrderRepo) Save(ctx context.Context, order *domain.Order) error {
 	// Открываем транзакцию
 	tx, err := p.db.Begin(ctx)
 	if err != nil {
@@ -91,7 +91,7 @@ func (p *PostgresOrderRepo) Save(ctx context.Context, order *domain.Order) error
 	return nil
 }
 
-func (p *PostgresOrderRepo) FindByID(ctx context.Context, id string) (*domain.Order, error) {
+func (p *OrderRepo) FindByID(ctx context.Context, id string) (*domain.Order, error) {
 	// TODO - вариант с json_agg
 	selectQuery := `
 	SELECT 
@@ -152,7 +152,7 @@ func (p *PostgresOrderRepo) FindByID(ctx context.Context, id string) (*domain.Or
 	return domain.RestoreOrder(id, customerID, totalPrice, itemsStates), nil
 }
 
-func (p *PostgresOrderRepo) Delete(ctx context.Context, order *domain.Order) error {
+func (p *OrderRepo) Delete(ctx context.Context, order *domain.Order) error {
 	// Запрос удаляет только родительский агрегат.
 	// Очистка дочерних позиций делегирована СУБД через ограничение on delete cascade.
 	// Использование составных запросов (cte) или ручного управления транзакциями не требуется.

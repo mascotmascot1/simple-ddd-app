@@ -18,8 +18,8 @@ postgres://username:password@host:port/database_name?sslmode=disable.
 собранная из конфига на этапе инициализации в main.go.
 */
 
-// NewPostgresPool настраивает pgxpool и возвращает готовое соединение.
-func NewPostgresPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
+// NewPool настраивает pgxpool и возвращает готовое соединение.
+func NewPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	// настройка конфига, pgxpool.NewWithConfig, пинг базы
 	db, err := pgxpool.New(ctx, dsn)
 	if err != nil {
