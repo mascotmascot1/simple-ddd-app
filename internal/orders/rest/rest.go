@@ -172,7 +172,7 @@ func (h *OrderHandlers) addItemToOrder(w http.ResponseWriter, r *http.Request) {
 	// --------------------------------------CHECK--------------------------------------
 
 	err = h.service.AddItemToOrder(r.Context(), orderID, req.ProductID,
-		req.Currency, req.Amount, req.Quantity)
+		req.Currency, req.Amount.Value, req.Quantity)
 	if err != nil {
 		h.logger.Printf("%s: service.AddItemToOrder: %v\n", caller, err)
 		h.handleCoreError(w, caller, err)

@@ -117,7 +117,6 @@ func NewOrder(orderID, customerID string) (*Order, error) {
 	return &Order{
 		id:         orderID,
 		customerID: customerID,
-		items:      make([]orderItem, 0),
 		// totalPrice можно не указывать если нет бизнес правила о том, например, что все новые заказы по умолчнию с USD валютой
 	}, nil
 	// Здесь можно генерировать Domain Event: OrderCreated
