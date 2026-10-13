@@ -142,7 +142,10 @@ func (o *Order) Items() []orderItem {
 
 // Метод на агрегате для добавления позиции (инкапсулирует логику)
 func (o *Order) AddItem(productID string, price Money, quantity int64) error {
-	if o.totalPrice.amount != 0 && o.totalPrice.currency != price.currency {
+	// Если в заказе уже есть товары, валюта нового товара должна совпадать с текущей.
+	// Опираемся на len(o.items), а не на totalPrice.amount, так как сумма заказа
+	// может быть равна нулю (например, если первый добавленный товар — бесплатный).
+	if len(o.items) > 0 && o.totalPrice.currency != price.currency {
 		return ValidateError{err: ErrMixedCurrency}
 	}
 

@@ -50,17 +50,31 @@ func NewServer(conf *cfg.Server, r chi.Router, logger *log.Logger) *http.Server 
 }
 
 func Run(srv *http.Server, conf *cfg.Server) error {
-	// Буферизированный канал для получения результата остановки сервера
-	shutdownError := make(chan error, 1)
-
+	var (
+		// Небуферизованный канал отмены. Закрываем через close(), что моментально
+		// разблокирует select и не заблокирует main, даже если горутина уже мертва.
+		cancel = make(chan struct{})
+		// Буфер = 1 обязателен! Защищает от утечки горутины в race condition,
+		// когда OS сигнал прилетел ровно в момент падения ListenAndServe, и main
+		// завершился раньше, чем горутина успела записать результат Shutdown.
+		shutdownError = make(chan error, 1)
+	)
 	// Горутина для перехвата системных сигналов
 	go func() {
+		// Буфер = 1 обязателен! Пакет signal пишет в канал через неблокирующий send.
+		// Если буфера не будет, а горутина еще не дошла до select, сигнал будет потерян.
 		quit := make(chan os.Signal, 1)
 
 		// Подписываемся на мягкие сигналы остановки (Ctrl+C, Docker stop)
 		signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-		<-quit // Блокируемся и ждем сигнала от ОС
-
+		select {
+		case <-quit: // Блокируемся и ждем сигнала от ОС
+		case <-cancel:
+			// Если ListenAndServe упал на старте, отписываем канал от пакета signal.
+			// Иначе ссылка на quit останется в глобальной мапе пакета, и GC не сможет его собрать.
+			signal.Stop(quit)
+			return
+		}
 		// Выделяем таймаут на завершение обработки текущих запросов клиентов
 		ctx, cancel := context.WithTimeout(context.Background(), conf.ShutdownTimeout)
 		defer cancel() // Очищаем системный таймер контекста
@@ -73,6 +87,7 @@ func Run(srv *http.Server, conf *cfg.Server) error {
 	err := srv.ListenAndServe()
 	// ErrServerClosed означает штатную остановку через вызов Shutdown() выше
 	if !errors.Is(err, http.ErrServerClosed) {
+		close(cancel) // Сигнализируем горутине, что сервер упал и ждать сигналов не нужно
 		return fmt.Errorf("launch server: %w", err)
 	}
 
