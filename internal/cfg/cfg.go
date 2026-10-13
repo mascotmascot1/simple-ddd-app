@@ -25,7 +25,7 @@ const (
 
 const (
 	defaultHTTPShutdownTimeout     time.Duration = 10   // seconds
-	defaultOrdersHTTPMaxUploadSize int64         = 1000 // KB
+	defaultOrdersHTTPMaxUploadSize int64         = 1024 // KB
 )
 
 type Server struct {
