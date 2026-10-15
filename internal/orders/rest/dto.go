@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"ddd/pkg/jsonx"
 	"errors"
 
 	"github.com/google/uuid"
@@ -20,7 +21,7 @@ type createOrderRequest struct {
 
 func (r *createOrderRequest) Validate() error {
 	if err := uuid.Validate(r.CustomerID); err != nil {
-		return errors.New("invalid customer_id")
+		return errors.New("missing or invalid customer_id")
 	}
 	return nil
 }
@@ -51,24 +52,24 @@ type getOrderResponse struct {
 }
 
 type addItemToOrderRequest struct {
-	ProductID string `json:"product_id"`
-	Amount    int64  `json:"amount"`
-	Currency  string `json:"currency"`
-	Quantity  int64  `json:"quantity"`
+	ProductID string             `json:"product_id"`
+	Amount    jsonx.Field[int64] `json:"amount"`
+	Currency  string             `json:"currency"`
+	Quantity  int64              `json:"quantity"`
 }
 
 func (r *addItemToOrderRequest) Validate() error {
 	if err := uuid.Validate(r.ProductID); err != nil {
-		return errors.New("invalid product_id")
+		return errors.New("missing or invalid product_id")
 	}
-	if r.Amount < 0 {
-		return errors.New("invalid amount")
+	if !r.Amount.Valid || r.Amount.Value < 0 {
+		return errors.New("missing or invalid amount")
 	}
 	if r.Quantity <= 0 {
-		return errors.New("invalid quantity")
+		return errors.New("missing or invalid quantity")
 	}
 	if r.Currency == "" {
-		return errors.New("invalid currency")
+		return errors.New("missing or invalid currency")
 	}
 	return nil
 }

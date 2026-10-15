@@ -8,10 +8,7 @@ import (
 	"ddd/internal/orders"
 	"log"
 	"os"
-	"time"
 )
-
-const postgresDialTimeout = 10 * time.Second
 
 func main() {
 	logger := log.New(os.Stdout, "[DDD-PROJECT] ", log.LstdFlags)
@@ -21,8 +18,8 @@ func main() {
 		logger.Fatalf("init config: %v\n", err)
 	}
 
-	ctxDB, cancelDB := context.WithTimeout(context.Background(), postgresDialTimeout) // тут тоже надо в константу вынести
-	db, err := postgres.NewPool(ctxDB, conf.Postgres.DSN())
+	ctxDB, cancelDB := context.WithTimeout(context.Background(), conf.Postgres.DialTimeout)
+	db, err := postgres.NewPool(ctxDB, &conf.Postgres.Pool, conf.Postgres.DSN())
 
 	// Конкретно в этом месте, в main.go, если ты не вызовешь cancelDB(), таймер просто дотикает
 	// свои 10 секунд, закроет канал, отвалится, и сборщик мусора его заберет. Глобальной утечки
@@ -35,7 +32,7 @@ func main() {
 	}
 	defer db.Close()
 
-	mux := http.NewRouter(logger)
+	mux := http.NewRouter(&conf.Server, logger)
 
 	orders.InitModule(db, mux, &conf.Orders, logger)
 

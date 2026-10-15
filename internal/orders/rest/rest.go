@@ -72,31 +72,31 @@ func (h *OrderHandlers) createOrder(w http.ResponseWriter, r *http.Request) {
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		h.logger.Printf("%s: read request body: %v\n", caller, err)
-		h.writeJSON(w, errorResponse{Error: "internal server error"}, http.StatusInternalServerError, caller)
+		h.handleError(w, caller, err)
 		return
 	}
 
 	var req createOrderRequest
 	if err := json.Unmarshal(data, &req); err != nil {
 		h.logger.Printf("%s: json unmarshalling: %v\n", caller, err)
-		h.writeJSON(w, errorResponse{Error: "bad request"}, http.StatusBadRequest, caller)
+		h.writeJSON(w, &errorResponse{Error: "bad request"}, http.StatusBadRequest, caller)
 		return
 	}
 
 	if err := req.Validate(); err != nil {
 		h.logger.Printf("%s: validation failed: %v\n", caller, err)
-		h.writeJSON(w, errorResponse{Error: "bad request"}, http.StatusBadRequest, caller)
+		h.writeJSON(w, &errorResponse{Error: "bad request"}, http.StatusBadRequest, caller)
 		return
 	}
 
 	order, err := h.service.CreateOrder(r.Context(), req.CustomerID)
 	if err != nil {
 		h.logger.Printf("%s: service.CreateOrder: %v\n", caller, err)
-		h.handleCoreError(w, caller, err)
+		h.handleError(w, caller, err)
 		return
 	}
 
-	h.writeJSON(w, createOrderResponse{OrderID: order.ID()}, http.StatusCreated, caller)
+	h.writeJSON(w, &createOrderResponse{OrderID: order.ID()}, http.StatusCreated, caller)
 }
 
 func (h *OrderHandlers) getOrder(w http.ResponseWriter, r *http.Request) {
@@ -107,14 +107,14 @@ func (h *OrderHandlers) getOrder(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "orderID")
 	if err := uuid.Validate(orderID); err != nil {
 		h.logger.Printf("%s: invalid order_id: %v\n", caller, err)
-		h.writeJSON(w, errorResponse{Error: "bad request"}, http.StatusBadRequest, caller)
+		h.writeJSON(w, &errorResponse{Error: "bad request"}, http.StatusBadRequest, caller)
 		return
 	}
 
 	order, err := h.service.GetOrder(r.Context(), orderID)
 	if err != nil {
 		h.logger.Printf("%s: service.GetOrder: %v\n", caller, err)
-		h.handleCoreError(w, caller, err)
+		h.handleError(w, caller, err)
 		return
 	}
 
@@ -136,7 +136,7 @@ func (h *OrderHandlers) getOrder(w http.ResponseWriter, r *http.Request) {
 		Items:       itemsDTO,
 	}
 
-	h.writeJSON(w, orderDTO, http.StatusOK, caller)
+	h.writeJSON(w, &orderDTO, http.StatusOK, caller)
 }
 
 func (h *OrderHandlers) addItemToOrder(w http.ResponseWriter, r *http.Request) {
@@ -145,37 +145,37 @@ func (h *OrderHandlers) addItemToOrder(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "orderID")
 	if err := uuid.Validate(orderID); err != nil {
 		h.logger.Printf("%s: invalid order_id: %v\n", caller, err)
-		h.writeJSON(w, errorResponse{Error: "bad request"}, http.StatusBadRequest, caller)
+		h.writeJSON(w, &errorResponse{Error: "bad request"}, http.StatusBadRequest, caller)
 		return
 	}
 
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		h.logger.Printf("%s: read request body: %v\n", caller, err)
-		h.writeJSON(w, errorResponse{Error: "internal server error"}, http.StatusInternalServerError, caller)
+		h.handleError(w, caller, err)
 		return
 	}
 
 	var req addItemToOrderRequest
 	if err := json.Unmarshal(data, &req); err != nil {
 		h.logger.Printf("json unmarshalling: %v\n", err)
-		h.writeJSON(w, errorResponse{Error: "bad request"}, http.StatusBadRequest, caller)
+		h.writeJSON(w, &errorResponse{Error: "bad request"}, http.StatusBadRequest, caller)
 		return
 	}
 
 	// --------------------------------------CHECK--------------------------------------
 	if err := req.Validate(); err != nil {
 		h.logger.Printf("%s: validation failed: %v\n", caller, err)
-		h.writeJSON(w, errorResponse{Error: "bad request"}, http.StatusBadRequest, caller)
+		h.writeJSON(w, &errorResponse{Error: "bad request"}, http.StatusBadRequest, caller)
 		return
 	}
 	// --------------------------------------CHECK--------------------------------------
 
 	err = h.service.AddItemToOrder(r.Context(), orderID, req.ProductID,
-		req.Currency, req.Amount, req.Quantity)
+		req.Currency, req.Amount.Value, req.Quantity)
 	if err != nil {
 		h.logger.Printf("%s: service.AddItemToOrder: %v\n", caller, err)
-		h.handleCoreError(w, caller, err)
+		h.handleError(w, caller, err)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -186,14 +186,14 @@ func (h *OrderHandlers) deleteOrder(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "orderID")
 	if err := uuid.Validate(orderID); err != nil {
 		h.logger.Printf("%s: invalid order_id: %v\n", caller, err)
-		h.writeJSON(w, errorResponse{Error: "bad request"}, http.StatusBadRequest, caller)
+		h.writeJSON(w, &errorResponse{Error: "bad request"}, http.StatusBadRequest, caller)
 		return
 	}
 
 	err := h.service.DeleteOrder(r.Context(), orderID)
 	if err != nil {
 		h.logger.Printf("%s: service.DeleteOrder: %v\n", caller, err)
-		h.handleCoreError(w, caller, err)
+		h.handleError(w, caller, err)
 		return
 	}
 
@@ -220,17 +220,20 @@ func (h *OrderHandlers) writeJSON(w http.ResponseWriter, data any, code int, cal
 	}
 }
 
-func (h *OrderHandlers) handleCoreError(w http.ResponseWriter, caller string, err error) {
+func (h *OrderHandlers) handleError(w http.ResponseWriter, caller string, err error) {
 	var (
-		valErr      domain.ValidateError
-		notFoundErr application.NotFoundError
+		valErr      *domain.ValidateError
+		notFoundErr *application.NotFoundError
+		maxBytesErr *http.MaxBytesError
 	)
 	switch {
 	case errors.As(err, &valErr):
-		h.writeJSON(w, errorResponse{Error: valErr.Error()}, http.StatusBadRequest, caller)
+		h.writeJSON(w, &errorResponse{Error: valErr.Error()}, http.StatusBadRequest, caller)
 	case errors.As(err, &notFoundErr):
-		h.writeJSON(w, errorResponse{Error: notFoundErr.Error()}, http.StatusNotFound, caller)
+		h.writeJSON(w, &errorResponse{Error: notFoundErr.Error()}, http.StatusNotFound, caller)
+	case errors.As(err, &maxBytesErr):
+		h.writeJSON(w, &errorResponse{Error: maxBytesErr.Error()}, http.StatusRequestEntityTooLarge, caller)
 	default:
-		h.writeJSON(w, errorResponse{Error: "internal server error"}, http.StatusInternalServerError, caller)
+		h.writeJSON(w, &errorResponse{Error: "internal server error"}, http.StatusInternalServerError, caller)
 	}
 }

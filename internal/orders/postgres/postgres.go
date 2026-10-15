@@ -98,7 +98,7 @@ func (p *OrderRepo) FindByID(ctx context.Context, id string) (*domain.Order, err
 		o.customer_id, 
 		o.total_amount, 
 		o.currency,
-		COALESCE(i.product_id::TEXT, 'NO_ITEMS_MARKER'), 
+		COALESCE(i.product_id::TEXT, @no_items_marker), 
 		COALESCE(i.amount, 0), 
 		COALESCE(i.currency, ''), 
 		COALESCE(i.quantity, 0)
@@ -106,7 +106,7 @@ func (p *OrderRepo) FindByID(ctx context.Context, id string) (*domain.Order, err
 	LEFT JOIN order_items i ON o.order_id = i.order_id
 	WHERE o.order_id = @order_id;
 	`
-	args := pgx.NamedArgs{"order_id": id}
+	args := pgx.NamedArgs{"order_id": id, "no_items_marker": noItemsMarker}
 
 	rows, err := p.db.Query(ctx, selectQuery, args)
 	if err != nil {
