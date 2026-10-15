@@ -26,11 +26,11 @@ type ValidateError struct {
 	err error
 }
 
-func (e ValidateError) Error() string {
+func (e *ValidateError) Error() string {
 	return e.err.Error()
 }
 
-func (e ValidateError) Unwrap() error {
+func (e *ValidateError) Unwrap() error {
 	return e.err
 }
 
@@ -51,10 +51,10 @@ func (m Money) Currency() string {
 // Паттерн Always Valid Domain Model — возврат error из конструктора value object и других сущностей
 func NewMoney(amount int64, currency string) (Money, error) {
 	if amount < 0 {
-		return Money{}, ValidateError{err: ErrNegativeAmount}
+		return Money{}, &ValidateError{err: ErrNegativeAmount}
 	}
 	if currency == "" {
-		return Money{}, ValidateError{err: ErrEmptyCurrency}
+		return Money{}, &ValidateError{err: ErrEmptyCurrency}
 	}
 	return Money{
 		amount:   amount,
@@ -71,10 +71,10 @@ type orderItem struct {
 // Фабричный метод для создания нового заказа
 func newOrderItem(productID string, price Money, quantity int64) (orderItem, error) {
 	if productID == "" {
-		return orderItem{}, ValidateError{err: ErrEmptyProductID}
+		return orderItem{}, &ValidateError{err: ErrEmptyProductID}
 	}
 	if quantity <= 0 {
-		return orderItem{}, ValidateError{err: ErrNonPositiveQuantity}
+		return orderItem{}, &ValidateError{err: ErrNonPositiveQuantity}
 	}
 	return orderItem{
 		productID: productID,
@@ -109,10 +109,10 @@ type Order struct {
 
 func NewOrder(orderID, customerID string) (*Order, error) {
 	if orderID == "" {
-		return nil, ValidateError{err: ErrEmptyOrderID}
+		return nil, &ValidateError{err: ErrEmptyOrderID}
 	}
 	if customerID == "" {
-		return nil, ValidateError{err: ErrEmptyCustomerID}
+		return nil, &ValidateError{err: ErrEmptyCustomerID}
 	}
 	return &Order{
 		id:         orderID,
@@ -146,7 +146,7 @@ func (o *Order) AddItem(productID string, price Money, quantity int64) error {
 	// Опираемся на len(o.items), а не на totalPrice.amount, так как сумма заказа
 	// может быть равна нулю (например, если первый добавленный товар — бесплатный).
 	if len(o.items) > 0 && o.totalPrice.currency != price.currency {
-		return ValidateError{err: ErrMixedCurrency}
+		return &ValidateError{err: ErrMixedCurrency}
 	}
 
 	var itemExists bool
@@ -154,7 +154,7 @@ func (o *Order) AddItem(productID string, price Money, quantity int64) error {
 		if o.items[i].productID == productID {
 			// Если товар найден, но его цена (amount) отличается от новой
 			if o.items[i].price.amount != price.amount {
-				return ValidateError{err: ErrItemPriceMismatch}
+				return &ValidateError{err: ErrItemPriceMismatch}
 			}
 
 			itemExists = true
