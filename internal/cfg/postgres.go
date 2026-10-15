@@ -27,7 +27,7 @@ const (
 	// ------------default-values--------------------
 	defaultPostgresDialTimeout time.Duration = 10 // seconds
 	defaultPostgresMaxConns    int32         = 20
-	defaultPostgresMinConns    int32         = 4
+	defaultPostgresMinConns    int32         = 3
 )
 
 type dsn struct {
