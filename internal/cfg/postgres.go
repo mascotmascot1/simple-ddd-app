@@ -4,15 +4,14 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"time"
 )
 
 const (
 	// -------------ENVS----------------------------
-	envPostgresDialTimeout = "POSTGRES_DIAL_TIMEOUT" // UNNECESSARY
+	envPostgresDialTimeout = "POSTGRES_DIAL_TIMEOUT" // UNNECESSARY — in seconds
 
-	// ------------dsn-info---------------
+	// ------------dsn---------------
 	envPostgresHost     = "POSTGRES_HOST"
 	envPostgresPort     = "POSTGRES_PORT"
 	envPostgresUser     = "POSTGRES_USER"
@@ -20,14 +19,14 @@ const (
 	envPostgresDatabase = "POSTGRES_DATABASE"
 	envPostgresSSLMode  = "POSTGRES_SSLMODE"
 
-	// ------------pool-info---------------
+	// ------------Pool---------------
 	envPostgresMaxConns = "POSTGRES_MAX_CONNS" // UNNECESSARY
 	envPostgresMinConns = "POSTGRES_MIN_CONNS" // UNNECESSARY
 
 	// ------------default-values--------------------
-	defaultPostgresDialTimeout time.Duration = 10 // seconds
-	defaultPostgresMaxConns    int32         = 20
-	defaultPostgresMinConns    int32         = 3
+	defaultPostgresDialTimeout       = 10 * time.Second
+	defaultPostgresMaxConns    int32 = 20
+	defaultPostgresMinConns    int32 = 3
 )
 
 type dsn struct {
@@ -39,7 +38,7 @@ type dsn struct {
 	sslMode  string
 }
 
-func newDSNInfo() (dsn, error) {
+func newDSN() (dsn, error) {
 	eHost := os.Getenv(envPostgresHost)
 	if eHost == "" {
 		return dsn{}, fmt.Errorf("empty postgres host env")
@@ -85,45 +84,15 @@ func (d dsn) DSN() string {
 		d.user, d.password, d.host, d.port, d.database, d.sslMode)
 }
 
-// хз оставить  poolInfo и dsnInfo или убрать 'Info'
 type Pool struct {
 	MinConns int32
 	MaxConns int32
 }
 
-func newPoolInfo(logger *log.Logger) Pool {
-	var (
-		minConns  = defaultPostgresMinConns
-		eMinConns = os.Getenv(envPostgresMinConns)
-	)
-	if eMinConns != "" {
-
-		mnc, err := strconv.ParseInt(eMinConns, 10, 32) // третьим аргументом размерность 32, тогда парсер сам выдаст ошибку, если кто-то в env запихнет число, превышающее лимит `int32`.
-		if err != nil {
-			logger.Printf("[WARNING] invalid %q, default (%d conns) for db pool was applied: %v\n",
-				envPostgresMinConns, defaultPostgresMinConns, err)
-		} else {
-			minConns = int32(mnc)
-		}
-	}
-
-	var (
-		maxConns  = defaultPostgresMaxConns
-		eMaxConns = os.Getenv(envPostgresMaxConns)
-	)
-	if eMaxConns != "" {
-		mnc, err := strconv.ParseInt(eMaxConns, 10, 32)
-		if err != nil {
-			logger.Printf("[WARNING] invalid %q, default (%d conns) for db pool was applied: %v\n",
-				envPostgresMaxConns, defaultPostgresMaxConns, err)
-		} else {
-			maxConns = int32(mnc)
-		}
-	}
-
+func newPool(logger *log.Logger) Pool {
 	return Pool{
-		MinConns: minConns,
-		MaxConns: maxConns,
+		MinConns: parseEnvInt32(envPostgresMinConns, defaultPostgresMinConns, logger),
+		MaxConns: parseEnvInt32(envPostgresMaxConns, defaultPostgresMaxConns, logger),
 	}
 }
 
@@ -134,29 +103,13 @@ type Postgres struct {
 }
 
 func newPostgres(logger *log.Logger) (Postgres, error) {
-	var (
-		dlTimeout = defaultPostgresDialTimeout * time.Second
-		eDTimeout = os.Getenv(envPostgresDialTimeout)
-	)
-	if eDTimeout != "" {
-		dt, err := strconv.ParseInt(eDTimeout, 10, 64)
-		if err != nil {
-			logger.Printf("[WARNING] invalid %q, default (%d sec) for dial timeout was applied: %v\n",
-				envPostgresDialTimeout, defaultPostgresDialTimeout, err)
-		} else {
-			dlTimeout = time.Duration(dt) * time.Second
-		}
-	}
-
-	dsnInfo, err := newDSNInfo()
+	dsn, err := newDSN()
 	if err != nil {
-		return Postgres{}, fmt.Errorf("create dsn info: %w", err)
+		return Postgres{}, fmt.Errorf("create dsn: %w", err)
 	}
-	poolinfo := newPoolInfo(logger)
-
 	return Postgres{
-		dsn:         dsnInfo,
-		Pool:        poolinfo,
-		DialTimeout: dlTimeout,
+		dsn:         dsn,
+		Pool:        newPool(logger),
+		DialTimeout: parseEnvDuration(envPostgresDialTimeout, defaultPostgresDialTimeout, logger),
 	}, nil
 }

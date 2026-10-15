@@ -10,19 +10,12 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-const (
-	defaultReadTimeout  = time.Second * 5
-	defaultWriteTimeout = time.Second * 15
-	defaultIdleTimeout  = time.Second * 15
-)
-
-func NewRouter(logger *log.Logger) chi.Router {
+func NewRouter(conf *cfg.Server, logger *log.Logger) chi.Router {
 	r := chi.NewRouter()
 
 	// Архитектурно правильный подход: middleware.Timeout выставляется на требуемое
@@ -32,7 +25,7 @@ func NewRouter(logger *log.Logger) chi.Router {
 	// Этот запас гарантирует, что если мидлварь отменит контекст на 10-й секунде, у транспортного
 	// слоя останется время сформировать и протолкнуть JSON со статусом 504 в сокет до того, как
 	// сработает жесткий сетевой обрыв от WriteTimeout
-	r.Use(middleware.Timeout(time.Second * 10))
+	r.Use(middleware.Timeout(conf.Timeouts.Request))
 
 	r.Use(WithLogging(logger))
 	return r
@@ -43,9 +36,9 @@ func NewServer(conf *cfg.Server, r chi.Router, logger *log.Logger) *http.Server 
 		Addr:         fmt.Sprintf("%s:%s", conf.Host, conf.Port),
 		ErrorLog:     logger,
 		Handler:      r,
-		ReadTimeout:  defaultReadTimeout,
-		WriteTimeout: defaultWriteTimeout,
-		IdleTimeout:  defaultIdleTimeout,
+		ReadTimeout:  conf.Timeouts.Read,
+		WriteTimeout: conf.Timeouts.Write,
+		IdleTimeout:  conf.Timeouts.Idle,
 	}
 }
 
@@ -76,7 +69,7 @@ func Run(srv *http.Server, conf *cfg.Server) error {
 			return
 		}
 		// Выделяем таймаут на завершение обработки текущих запросов клиентов
-		ctx, cancel := context.WithTimeout(context.Background(), conf.ShutdownTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), conf.Timeouts.Shutdown)
 		defer cancel() // Очищаем системный таймер контекста
 
 		// Инициируем мягкую остановку и отправляем результат (ошибку или nil) в канал

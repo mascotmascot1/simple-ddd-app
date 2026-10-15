@@ -32,7 +32,7 @@ func main() {
 	}
 	defer db.Close()
 
-	mux := http.NewRouter(logger)
+	mux := http.NewRouter(&conf.Server, logger)
 
 	orders.InitModule(db, mux, &conf.Orders, logger)
 

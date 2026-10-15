@@ -4,24 +4,51 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"time"
 )
 
 const (
 	// -------------ENVS----------------------------
-	envHTTPHost            = "HTTP_HOST"
-	envHTTPPort            = "HTTP_PORT"
+	envHTTPHost = "HTTP_HOST"
+	envHTTPPort = "HTTP_PORT"
+
 	envHTTPShutdownTimeout = "HTTP_SHUTDOWN_TIMEOUT" // UNNECESSARY — in seconds
+	envHTTPIdleTimeout     = "HTTP_IDLE_TIMEOUT"     // UNNECESSARY — in seconds
+	envHTTPWriteTimeout    = "HTTP_WRITE_TIMEOUT"    // UNNECESSARY — in seconds
+	envHTTPReadTimeout     = "HTTP_READ_TIMEOUT"     // UNNECESSARY — in seconds
+	envHTTPRequestTimeout  = "HTTP_REQUEST_TIMEOUT"  // UNNECESSARY — in seconds
 
 	// ------------default-values------------------
-	defaultHTTPShutdownTimeout time.Duration = 10 // seconds
+	defaultHTTPShutdownTimeout = 10 * time.Second
+	defaultHTTPReadTimeout     = 5 * time.Second
+	defaultHTTPWriteTimeout    = 15 * time.Second
+	defaultHTTPIdleTimeout     = 15 * time.Second
+	defaultHTTPRequestTimeout  = 10 * time.Second
 )
 
+// в мнч лучше или ед.ч
+type Timeouts struct {
+	Shutdown time.Duration
+	Read     time.Duration
+	Write    time.Duration
+	Idle     time.Duration
+	Request  time.Duration
+}
+
+func newTimeouts(logger *log.Logger) Timeouts {
+	return Timeouts{
+		Shutdown: parseEnvDuration(envHTTPShutdownTimeout, defaultHTTPShutdownTimeout, logger),
+		Read:     parseEnvDuration(envHTTPReadTimeout, defaultHTTPReadTimeout, logger),
+		Write:    parseEnvDuration(envHTTPWriteTimeout, defaultHTTPWriteTimeout, logger),
+		Idle:     parseEnvDuration(envHTTPIdleTimeout, defaultHTTPIdleTimeout, logger),
+		Request:  parseEnvDuration(envHTTPRequestTimeout, defaultHTTPRequestTimeout, logger),
+	}
+}
+
 type Server struct {
-	Host            string
-	Port            string
-	ShutdownTimeout time.Duration
+	Host     string
+	Port     string
+	Timeouts Timeouts
 }
 
 func newServer(logger *log.Logger) (Server, error) {
@@ -35,21 +62,9 @@ func newServer(logger *log.Logger) (Server, error) {
 		return Server{}, fmt.Errorf("empty http port env")
 	}
 
-	stTimeout := defaultHTTPShutdownTimeout * time.Second
-	eSTimeout := os.Getenv(envHTTPShutdownTimeout)
-	if eSTimeout != "" {
-		st, err := strconv.ParseInt(eSTimeout, 10, 64)
-		if err != nil {
-			logger.Printf("[WARNING] invalid %q, default (%d sec) for http server was applied: %v\n",
-				envHTTPShutdownTimeout, defaultHTTPShutdownTimeout, err)
-		} else {
-			stTimeout = time.Duration(st) * time.Second
-		}
-	}
-
 	return Server{
-		Host:            eHost,
-		Port:            ePort,
-		ShutdownTimeout: stTimeout,
+		Host:     eHost,
+		Port:     ePort,
+		Timeouts: newTimeouts(logger),
 	}, nil
 }
