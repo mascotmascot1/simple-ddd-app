@@ -70,7 +70,7 @@ func Run(srv *http.Server, conf *cfg.Server) error {
 		}
 		// Выделяем таймаут на завершение обработки текущих запросов клиентов
 		ctx, cancel := context.WithTimeout(context.Background(), conf.Timeouts.Shutdown)
-		defer cancel() // Очищаем системный таймер контекста
+		defer cancel() // в данном случае (когда родитель `Background` и горутина сразу умирает) вызов `defer cancel()` — это **исключительно идиоматика и defensive programming**.
 
 		// Инициируем мягкую остановку и отправляем результат (ошибку или nil) в канал
 		shutdownError <- srv.Shutdown(ctx)
