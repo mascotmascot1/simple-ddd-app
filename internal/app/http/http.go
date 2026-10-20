@@ -46,7 +46,7 @@ func Run(srv *http.Server, conf *cfg.Server) error {
 	var (
 		// Небуферизованный канал отмены. Закрываем через close(), что моментально
 		// разблокирует select и не заблокирует main, даже если горутина уже мертва.
-		cancel = make(chan struct{})
+		cancelCh = make(chan struct{})
 		// Буфер = 1 обязателен! Защищает от утечки горутины в race condition,
 		// когда OS сигнал прилетел ровно в момент падения ListenAndServe, и main
 		// завершился раньше, чем горутина успела записать результат Shutdown.
@@ -62,7 +62,7 @@ func Run(srv *http.Server, conf *cfg.Server) error {
 		signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 		select {
 		case <-quit: // Блокируемся и ждем сигнала от ОС
-		case <-cancel:
+		case <-cancelCh:
 			// Если ListenAndServe упал на старте, отписываем канал от пакета signal.
 			// Иначе ссылка на quit останется в глобальной мапе пакета, и GC не сможет его собрать.
 			signal.Stop(quit)
@@ -80,7 +80,7 @@ func Run(srv *http.Server, conf *cfg.Server) error {
 	err := srv.ListenAndServe()
 	// ErrServerClosed означает штатную остановку через вызов Shutdown() выше
 	if !errors.Is(err, http.ErrServerClosed) {
-		close(cancel) // Сигнализируем горутине, что сервер упал и ждать сигналов не нужно
+		close(cancelCh) // Сигнализируем горутине, что сервер упал и ждать сигналов не нужно
 		return fmt.Errorf("launch server: %w", err)
 	}
 
