@@ -22,11 +22,11 @@ type NotFoundError struct {
 	err error
 }
 
-func (e NotFoundError) Error() string {
+func (e *NotFoundError) Error() string {
 	return e.err.Error()
 }
 
-func (e NotFoundError) Unwrap() error {
+func (e *NotFoundError) Unwrap() error {
 	return e.err
 }
 
@@ -55,7 +55,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, customerID string) (*dom
 		return nil, fmt.Errorf("check customer existence: %w", err)
 	}
 	if !customerExists {
-		return nil, NotFoundError{err: ErrCustomerNotFound}
+		return nil, &NotFoundError{err: ErrCustomerNotFound}
 	}
 
 	orderID, err := uuid.NewV7()
@@ -80,7 +80,7 @@ func (s *OrderService) AddItemToOrder(ctx context.Context, orderID, productID, c
 		return fmt.Errorf("check product existence: %w", err)
 	}
 	if !productExists {
-		return NotFoundError{err: ErrProductNotFound}
+		return &NotFoundError{err: ErrProductNotFound}
 	}
 
 	order, err := s.repo.FindByID(ctx, orderID)
@@ -88,7 +88,7 @@ func (s *OrderService) AddItemToOrder(ctx context.Context, orderID, productID, c
 		return fmt.Errorf("find order by id: %w", err)
 	}
 	if order == nil {
-		return NotFoundError{err: ErrOrderNotFound}
+		return &NotFoundError{err: ErrOrderNotFound}
 	}
 
 	price, err := domain.NewMoney(amount, currency)
@@ -129,7 +129,7 @@ func (s *OrderService) DeleteOrder(ctx context.Context, orderID string) error {
 		return fmt.Errorf("find order by id: %w", err)
 	}
 	if order == nil {
-		return NotFoundError{err: ErrOrderNotFound}
+		return &NotFoundError{err: ErrOrderNotFound}
 	}
 
 	order.Delete()
@@ -146,7 +146,7 @@ func (s *OrderService) GetOrder(ctx context.Context, orderID string) (*domain.Or
 		return nil, fmt.Errorf("find order by id: %w", err)
 	}
 	if order == nil {
-		return nil, NotFoundError{err: ErrOrderNotFound}
+		return nil, &NotFoundError{err: ErrOrderNotFound}
 	}
 	// Для идемпотентных операций чтения, не изменяющих состояние системы,
 	// доменные события не генерируются.
