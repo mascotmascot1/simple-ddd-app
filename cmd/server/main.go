@@ -40,7 +40,7 @@ func main() {
 
 	if err := http.Run(srv, &conf.Server); err != nil {
 		logger.Printf("http server stopped with error: %v\n", err)
-	} else {
-		logger.Println("http server stopped successfully")
+		return
 	}
+	logger.Println("http server stopped successfully")
 }
