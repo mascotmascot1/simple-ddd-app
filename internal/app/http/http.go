@@ -12,7 +12,6 @@ import (
 	"syscall"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 )
 
 func NewRouter(conf *cfg.Server, logger *log.Logger) chi.Router {
@@ -25,7 +24,7 @@ func NewRouter(conf *cfg.Server, logger *log.Logger) chi.Router {
 	// Этот запас гарантирует, что если мидлварь отменит контекст на 10-й секунде, у транспортного
 	// слоя останется время сформировать и протолкнуть JSON со статусом 504 в сокет до того, как
 	// сработает жесткий сетевой обрыв от WriteTimeout
-	r.Use(middleware.Timeout(conf.Timeouts.Request))
+	r.Use(Timeout(conf.Timeouts.Request))
 
 	r.Use(WithLogging(logger))
 	return r

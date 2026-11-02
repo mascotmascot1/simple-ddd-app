@@ -220,6 +220,9 @@ func (h *OrderHandlers) writeJSON(w http.ResponseWriter, data any, code int, cal
 	}
 }
 
+// handleError централизованно обрабатывает ошибки хендлеров (Responder/Error Translator в рамках Centralized Error Handling).
+// Включает обработку context.DeadlineExceeded, так как мидлварь таймаута
+// только отменяет контекст, оставляя формирование ответа за нами.
 func (h *OrderHandlers) handleError(w http.ResponseWriter, caller string, err error) {
 	var (
 		valErr      *domain.ValidateError
@@ -227,6 +230,8 @@ func (h *OrderHandlers) handleError(w http.ResponseWriter, caller string, err er
 		maxBytesErr *http.MaxBytesError
 	)
 	switch {
+	case errors.Is(err, context.DeadlineExceeded):
+		h.writeJSON(w, &errorResponse{Error: "service unavailable: request timed out"}, http.StatusServiceUnavailable, caller)
 	case errors.As(err, &valErr):
 		h.writeJSON(w, &errorResponse{Error: valErr.Error()}, http.StatusBadRequest, caller)
 	case errors.As(err, &notFoundErr):
