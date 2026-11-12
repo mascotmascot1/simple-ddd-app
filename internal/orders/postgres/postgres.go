@@ -11,6 +11,7 @@ import (
 	"context"
 	"ddd/internal/orders/domain"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -40,10 +41,23 @@ func (p *OrderRepo) Save(ctx context.Context, order *domain.Order) error {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
 
-	// Отложенный rollback гарантирует, что если функция завершится ошибкой
+	// Отложенный Rollback гарантирует, что если функция завершится ошибкой
 	// до вызова Commit, транзакция будет отменена.
 	// При успешном Commit этот Rollback просто ничего не сделает.
-	defer tx.Rollback(ctx) // nolint:errcheck
+	//
+	// Используем context.WithoutCancel(ctx), чтобы отмена исходного запроса
+	// не помешала выполнить очистку, убив TCP-коннект. Но добавляем WithTimeout, чтобы
+	// ограничить ожидание ответа PostgreSQL на rollback запрос, если возникнут проблемы с сетью
+	// или сервер перестанет отвечать.
+	defer func() {
+		rollbackCtx, cancel := context.WithTimeout(
+			context.WithoutCancel(ctx),
+			5*time.Second,
+		)
+		defer cancel()
+
+		_ = tx.Rollback(rollbackCtx)
+	}()
 
 	upsetOrderQuery := `
 		INSERT INTO orders (order_id, customer_id, total_amount, currency)
