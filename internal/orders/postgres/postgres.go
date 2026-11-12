@@ -21,6 +21,8 @@ const (
 	maxArgumentCount    = 8
 	defaultItemCapacity = 10
 
+	rollbackTimeout = 5 * time.Second
+
 	noItemsMarker = "NO_ITEMS_MARKER"
 )
 
@@ -52,7 +54,7 @@ func (p *OrderRepo) Save(ctx context.Context, order *domain.Order) error {
 	defer func() {
 		rollbackCtx, cancel := context.WithTimeout(
 			context.WithoutCancel(ctx),
-			5*time.Second,
+			rollbackTimeout,
 		)
 		defer cancel()
 
