@@ -2,7 +2,6 @@ package http
 
 import (
 	"context"
-	"ddd/internal/cfg"
 	"errors"
 	"fmt"
 	"log"
@@ -10,6 +9,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"ddd/internal/cfg"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -32,12 +33,13 @@ func NewRouter(conf *cfg.Server, logger *log.Logger) chi.Router {
 
 func NewServer(conf *cfg.Server, r chi.Router, logger *log.Logger) *http.Server {
 	return &http.Server{
-		Addr:         fmt.Sprintf("%s:%s", conf.Host, conf.Port),
-		ErrorLog:     logger,
-		Handler:      r,
-		ReadTimeout:  conf.Timeouts.Read,
-		WriteTimeout: conf.Timeouts.Write,
-		IdleTimeout:  conf.Timeouts.Idle,
+		Addr:              fmt.Sprintf("%s:%s", conf.Host, conf.Port),
+		ErrorLog:          logger,
+		Handler:           r,
+		ReadTimeout:       conf.Timeouts.Read,
+		ReadHeaderTimeout: conf.Timeouts.ReadHeader,
+		WriteTimeout:      conf.Timeouts.Write,
+		IdleTimeout:       conf.Timeouts.Idle,
 	}
 }
 
@@ -51,6 +53,7 @@ func Run(srv *http.Server, conf *cfg.Server) error {
 		// завершился раньше, чем горутина успела записать результат Shutdown.
 		shutdownError = make(chan error, 1)
 	)
+
 	// Горутина для перехвата системных сигналов
 	go func() {
 		// Буфер = 1 обязателен! Пакет signal пишет в канал через неблокирующий send.
