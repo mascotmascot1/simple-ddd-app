@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
+	"log"
+	"os"
+
 	"ddd/internal/app/http"
 	"ddd/internal/app/postgres"
 	"ddd/internal/cfg"
 	"ddd/internal/orders"
-	"log"
-	"os"
 )
 
 func main() {
@@ -39,8 +40,13 @@ func main() {
 	srv := http.NewServer(&conf.Server, mux, logger)
 
 	if err := http.Run(srv, &conf.Server); err != nil {
-		logger.Printf("http server stopped with error: %v\n", err)
-		return
+		// Если Run вернул ошибку, значит Shutdown не уложился в отведенное время
+		// (например, зависло TCP-соединение к отвалившейся БД и мы
+		// не дождались ответа или зависшая горутина без контекста).
+		// Вызов logger.Fatalf делает os.Exit(1).
+		// Это критически важно: жесткий выход предотвратит зависание процесса
+		// на defer db.Close(), делегируя очистку TCP-соединений операционной системе.
+		logger.Fatalf("http server stopped with error: %v\n", err)
 	}
 	logger.Println("http server stopped successfully")
 }

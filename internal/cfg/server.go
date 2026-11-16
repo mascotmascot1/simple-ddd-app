@@ -20,12 +20,23 @@ const (
 	envHTTPRequestTimeout    = "HTTP_REQUEST_TIMEOUT"     // UNNECESSARY — in seconds
 
 	// ------------default-values------------------
-	defaultHTTPShutdownTimeout   = 10 * time.Second
+
+	// defaultHTTPShutdownTimeout определяет верхнюю границу времени на graceful shutdown.
+	// ВАЖНО: Значение должно быть больше defaultHTTPRequestTimeout.
+	// Если Shutdown не уложится в это время, процесс будет убит жестко (os.Exit).
+	defaultHTTPShutdownTimeout = 25 * time.Second
+
+	// defaultHTTPRequestTimeout ограничивает время выполнения бизнес-логики.
+	// ВАЖНО: Это значение должно быть строго меньше defaultHTTPReadTimeout
+	// и defaultHTTPWriteTimeout. Иначе транспортный слой (TCP) оборвет
+	// соединение раньше, чем мидлварь успеет отловить таймаут и отдать клиенту
+	// красивый JSON с HTTP 504 Gateway Timeout.
+	defaultHTTPRequestTimeout = 15 * time.Second
+
 	defaultHTTPReadHeaderTimeout = 5 * time.Second
 	defaultHTTPReadTimeout       = 20 * time.Second
 	defaultHTTPWriteTimeout      = 25 * time.Second
 	defaultHTTPIdleTimeout       = 15 * time.Second
-	defaultHTTPRequestTimeout    = 15 * time.Second
 )
 
 type Timeouts struct {
