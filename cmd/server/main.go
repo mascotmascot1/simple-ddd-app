@@ -5,10 +5,10 @@ import (
 	"log"
 	"os"
 
-	"ddd/internal/app/http"
-	"ddd/internal/app/postgres"
-	"ddd/internal/cfg"
-	"ddd/internal/orders"
+	"github.com/mascotmascot1/simple-ddd-app/internal/app/http"
+	"github.com/mascotmascot1/simple-ddd-app/internal/app/postgres"
+	"github.com/mascotmascot1/simple-ddd-app/internal/cfg"
+	"github.com/mascotmascot1/simple-ddd-app/internal/orders"
 )
 
 func main() {

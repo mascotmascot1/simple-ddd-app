@@ -1,8 +1,9 @@
 package rest
 
 import (
-	"ddd/pkg/jsonx"
 	"errors"
+
+	"github.com/mascotmascot1/simple-ddd-app/pkg/jsonx"
 
 	"github.com/google/uuid"
 )

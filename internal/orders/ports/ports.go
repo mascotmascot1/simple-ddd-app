@@ -2,7 +2,8 @@ package ports // Пакет `ports` — это интерфейс ядра си�
 
 import (
 	"context"
-	"ddd/internal/orders/domain"
+
+	"github.com/mascotmascot1/simple-ddd-app/internal/orders/domain"
 )
 
 // Исходящее API (Outbound ports): Это твои интерфейсы в пакете ports (OrderRepository, ProductChecker).

@@ -1,11 +1,12 @@
 package orders
 
 import (
-	"ddd/internal/cfg"
-	"ddd/internal/orders/application"
-	"ddd/internal/orders/postgres"
-	"ddd/internal/orders/rest"
 	"log"
+
+	"github.com/mascotmascot1/simple-ddd-app/internal/cfg"
+	"github.com/mascotmascot1/simple-ddd-app/internal/orders/application"
+	"github.com/mascotmascot1/simple-ddd-app/internal/orders/postgres"
+	"github.com/mascotmascot1/simple-ddd-app/internal/orders/rest"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"

@@ -1,4 +1,4 @@
-module ddd
+module github.com/mascotmascot1/simple-ddd-app
 
 go 1.26.3
 

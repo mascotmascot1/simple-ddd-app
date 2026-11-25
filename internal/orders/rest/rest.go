@@ -2,13 +2,14 @@ package rest
 
 import (
 	"context"
-	"ddd/internal/orders/application"
-	"ddd/internal/orders/domain"
 	"encoding/json"
 	"errors"
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/mascotmascot1/simple-ddd-app/internal/orders/application"
+	"github.com/mascotmascot1/simple-ddd-app/internal/orders/domain"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"

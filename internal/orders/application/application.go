@@ -2,10 +2,11 @@ package application
 
 import (
 	"context"
-	"ddd/internal/orders/domain"
-	"ddd/internal/orders/ports"
 	"errors"
 	"fmt"
+
+	"github.com/mascotmascot1/simple-ddd-app/internal/orders/domain"
+	"github.com/mascotmascot1/simple-ddd-app/internal/orders/ports"
 
 	"github.com/google/uuid"
 )

@@ -2,9 +2,10 @@ package postgres
 
 import (
 	"context"
-	"ddd/internal/cfg"
 	"fmt"
 	"time"
+
+	"github.com/mascotmascot1/simple-ddd-app/internal/cfg"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )

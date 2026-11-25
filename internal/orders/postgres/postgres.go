@@ -9,9 +9,10 @@ package postgres
 
 import (
 	"context"
-	"ddd/internal/orders/domain"
 	"fmt"
 	"time"
+
+	"github.com/mascotmascot1/simple-ddd-app/internal/orders/domain"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"

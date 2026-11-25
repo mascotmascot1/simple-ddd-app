@@ -10,7 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"ddd/internal/cfg"
+	"github.com/mascotmascot1/simple-ddd-app/internal/cfg"
 
 	"github.com/go-chi/chi/v5"
 )
